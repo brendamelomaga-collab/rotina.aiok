@@ -11,7 +11,9 @@ import {
   resolveResponseValue,
   calculateQuestionStats,
   calculateFactorFrequencies,
-  generateMonthlyReview
+  generateMonthlyReview,
+  filterAgendaByDate,
+  calculateDayRoutineProgress
 } from './routineCalculations';
 import {
   RoutineTask,
@@ -19,7 +21,8 @@ import {
   GoalItem,
   MoodEntry,
   QuestionResponse,
-  QuestionItem
+  QuestionItem,
+  AgendaItem
 } from '../types';
 
 test('calculateRoutineProgress calculates percentage and totals correctly', () => {
@@ -275,4 +278,83 @@ test('calculateFactorFrequencies sorts factors by frequency', () => {
   assert.ok(factors.length > 0);
   assert.ok(factors[0].percentage >= factors[factors.length - 1].percentage);
 });
+
+test('generateMonthlyReview generates all 7 pillars with empathetic reflection', () => {
+  const review = generateMonthlyReview({
+    periodLabel: 'Novembro de 2026',
+    responses: [
+      { id: '1', questionId: 'q1', date: '2026-11-16', value: 'positivo', updatedAt: '' },
+      { id: '2', questionId: 'q2', date: '2026-11-16', value: 'nao_se_aplica', updatedAt: '' }
+    ],
+    questions: [
+      {
+        id: 'q1',
+        groupId: 'g1',
+        areaId: 'area-mat',
+        title: 'Tempo de qualidade',
+        habitType: 'bom',
+        positiveIf: 'sim',
+        positiveLabel: 'Sim',
+        negativeLabel: 'Não',
+        frequency: 'todos_os_dias'
+      }
+    ],
+    lifeAreas: [{ id: 'area-mat', name: 'Maternidade', order: 1 }],
+    routineTasks: [{ id: 'r1', title: 'Banho', period: 'noite', completed: true }],
+    agendaItems: [{ id: 'a1', title: 'Futebol', date: '2026-11-17', time: '17:00', displayDay: 'Terça', isRecurring: true, completed: true, category: 'esporte', icon: '⚽' }],
+    healthItems: [{ id: 'h1', name: 'Ômega 3', dosage: '1', frequency: 'diário', memberId: '1', memberName: 'Brenda', time: '09:00', confirmed: true, category: 'suplemento' }],
+    goals: [
+      {
+        id: 'g1',
+        title: 'Pintar o quarto',
+        category: 'Casa',
+        progressPercent: 100,
+        totalSteps: 2,
+        completedSteps: 2,
+        status: 'concluida',
+        steps: []
+      }
+    ]
+  });
+
+  assert.equal(review.period, 'Novembro de 2026');
+  assert.equal(review.positiveRate, 100);
+  assert.equal(review.goalsSummary.completedGoals, 1);
+  assert.ok(review.warmAnalysisText.length > 0);
+  assert.ok(review.patternsDetected.length > 0);
+  assert.ok(review.suggestionsNextMonth.length > 0);
+});
+
+test('filterAgendaByDate filters events matching date string', () => {
+  const events: AgendaItem[] = [
+    { id: '1', title: 'Futebol', date: '2026-11-17', time: '17:00', displayDay: 'Terça', isRecurring: true, completed: false, category: 'esporte', icon: '⚽' },
+    { id: '2', title: 'Aniversário', date: '2026-11-20', time: '19:00', displayDay: 'Sexta', isRecurring: false, completed: false, category: 'familia', icon: '🎂' }
+  ];
+  assert.equal(filterAgendaByDate(events, '2026-11-17').length, 1);
+  assert.equal(filterAgendaByDate(events, '2026-11-17')[0].title, 'Futebol');
+  assert.equal(filterAgendaByDate(events, '2026-11-20').length, 1);
+  assert.equal(filterAgendaByDate(events, '2026-11-25').length, 0);
+});
+
+test('calculateDayRoutineProgress filters tasks active for specific day', () => {
+  const tasks: RoutineTask[] = [
+    { id: '1', title: 'Todos os dias', period: 'manha', completed: true },
+    { id: '2', title: 'Seg, Qua e Sex', period: 'especiais', completed: false, daysOfWeek: [1, 3, 5] },
+    { id: '3', title: 'Domingo', period: 'especiais', completed: true, daysOfWeek: [0] }
+  ];
+
+  // Monday (1)
+  const monday = calculateDayRoutineProgress(tasks, 1);
+  assert.equal(monday.total, 2); // tasks 1 and 2
+  assert.equal(monday.completed, 1);
+  assert.equal(monday.percent, 50);
+
+  // Sunday (0)
+  const sunday = calculateDayRoutineProgress(tasks, 0);
+  assert.equal(sunday.total, 2); // tasks 1 and 3
+  assert.equal(sunday.completed, 2);
+  assert.equal(sunday.percent, 100);
+});
+
+
 

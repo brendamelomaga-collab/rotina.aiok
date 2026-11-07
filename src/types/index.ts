@@ -109,6 +109,9 @@ export interface AgendaItem {
   completed: boolean;
   category: 'familia' | 'esporte' | 'pessoal' | 'saude' | 'trabalho';
   icon: string;
+  reminderMinutes?: number;
+  hasVisualNotification?: boolean;
+  location?: string;
 }
 
 export interface RoutineTask {
@@ -120,6 +123,8 @@ export interface RoutineTask {
   time?: string;
   iconName?: string;
   tag?: string;
+  daysOfWeek?: number[];
+  activeDaysLabel?: string;
 }
 
 export interface ContextualReminder {
@@ -178,7 +183,33 @@ export interface AppNotification {
   type: 'lembrete' | 'familia' | 'rotina';
 }
 
-export type NavTab = 'inicio' | 'mapa' | 'agenda' | 'rotinas' | 'relatorios' | 'mais';
+export interface TaskExecutionRecord {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  displayDate: string;
+  completedAt: string;
+}
+
+export interface NotificationPreferences {
+  routineReminders: boolean;
+  agendaReminders: boolean;
+  mapaDailyReminder: boolean;
+  soundAlerts: boolean;
+}
+
+export type NavTab =
+  | 'inicio'
+  | 'mapa'
+  | 'agenda'
+  | 'rotinas'
+  | 'relatorios'
+  | 'cuidados'
+  | 'metas'
+  | 'recorrentes'
+  | 'mais'
+  | 'ia'
+  | 'configuracoes';
 
 export interface MonthlyReviewData {
   period: string;

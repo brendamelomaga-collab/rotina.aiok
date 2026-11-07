@@ -24,6 +24,11 @@ import { MeuMapaView } from './components/views/MeuMapaView';
 import { AgendaView } from './components/views/AgendaView';
 import { RotinasView } from './components/views/RotinasView';
 import { RelatoriosView } from './components/views/RelatoriosView';
+import { CuidadosSaudeView } from './components/views/CuidadosSaudeView';
+import { MetasView } from './components/views/MetasView';
+import { TarefasRecorrentesView } from './components/views/TarefasRecorrentesView';
+import { AiAssistantView } from './components/views/AiAssistantView';
+import { ConfiguracoesPerfilView } from './components/views/ConfiguracoesPerfilView';
 
 const MainContent: React.FC = () => {
   const { activeTab } = useApp();
@@ -46,6 +51,11 @@ const MainContent: React.FC = () => {
         {activeTab === 'agenda' && <AgendaView />}
         {activeTab === 'rotinas' && <RotinasView />}
         {activeTab === 'relatorios' && <RelatoriosView />}
+        {activeTab === 'cuidados' && <CuidadosSaudeView />}
+        {activeTab === 'metas' && <MetasView />}
+        {activeTab === 'recorrentes' && <TarefasRecorrentesView />}
+        {activeTab === 'ia' && <AiAssistantView />}
+        {activeTab === 'configuracoes' && <ConfiguracoesPerfilView />}
       </main>
 
       {/* Fixed bottom navigation */}

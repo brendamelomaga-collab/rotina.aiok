@@ -21,7 +21,9 @@ import {
   QuestionResponse,
   QuestionChoice,
   NavTab,
-  MonthlyReviewData
+  MonthlyReviewData,
+  TaskExecutionRecord,
+  NotificationPreferences
 } from '../types';
 import { resolveResponseValue } from '../utils/routineCalculations';
 
@@ -31,6 +33,15 @@ interface AppContextType {
   currentProfile: UserProfile;
   switchProfile: (profileId: string) => void;
   updateProfileName: (profileId: string, name: string) => void;
+  addProfile: (profile: Omit<UserProfile, 'id'>) => void;
+  deleteProfile: (id: string) => void;
+
+  // Preferences & Data
+  notificationPreferences: NotificationPreferences;
+  toggleNotificationPreference: (key: keyof NotificationPreferences) => void;
+  exportAppData: () => string;
+  importAppData: (jsonString: string) => boolean;
+  resetAppToDefaults: () => void;
 
   // Date selection
   selectedDate: string;
@@ -123,15 +134,20 @@ interface AppContextType {
   healthItems: HealthMedication[];
   toggleHealthItem: (id: string) => void;
   addHealthItem: (item: Omit<HealthMedication, 'id' | 'confirmed'>) => void;
+  deleteHealthItem: (id: string) => void;
 
   // Metas
   goals: GoalItem[];
   toggleGoalStep: (goalId: string, stepId: string) => void;
   addGoal: (goal: Omit<GoalItem, 'id' | 'progressPercent' | 'completedSteps' | 'totalSteps'>) => void;
+  deleteGoal: (id: string) => void;
 
   // Tarefas Recorrentes
   recurringTasks: RecurringTaskItem[];
+  recurringHistory: TaskExecutionRecord[];
   completeRecurringTask: (id: string) => void;
+  addRecurringTask: (task: Omit<RecurringTaskItem, 'id' | 'status'>) => void;
+  deleteRecurringTask: (id: string) => void;
 
   // Notifications
   notifications: AppNotification[];
@@ -189,6 +205,13 @@ const defaultProfiles: UserProfile[] = [
     subtitle: 'Parceiro de rotina'
   }
 ];
+
+const defaultNotificationPreferences: NotificationPreferences = {
+  routineReminders: true,
+  agendaReminders: true,
+  mapaDailyReminder: true,
+  soundAlerts: true
+};
 
 const defaultLifeAreas: LifeArea[] = [
   { id: 'area-maternidade', name: 'Maternidade', icon: '👶', order: 1 },
@@ -605,6 +628,30 @@ const defaultRecurringTasks: RecurringTaskItem[] = [
   }
 ];
 
+const defaultRecurringHistory: TaskExecutionRecord[] = [
+  {
+    id: 'th-1',
+    taskId: 'rec-1',
+    taskTitle: 'Calibrar pneu do carro/moto',
+    displayDate: '17/10',
+    completedAt: '2026-10-17T10:00:00Z'
+  },
+  {
+    id: 'th-2',
+    taskId: 'rec-3',
+    taskTitle: 'Trocar roupa de cama e toalhas',
+    displayDate: '10/10',
+    completedAt: '2026-10-10T09:30:00Z'
+  },
+  {
+    id: 'th-3',
+    taskId: 'rec-2',
+    taskTitle: 'Lavar os sapatos e tênis das crianças',
+    displayDate: '03/10',
+    completedAt: '2026-10-03T15:00:00Z'
+  }
+];
+
 const defaultNotifications: AppNotification[] = [
   {
     id: 'n-1',
@@ -825,6 +872,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const [recurringHistory, setRecurringHistory] = useState<TaskExecutionRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_recurring_history`);
+      return saved ? JSON.parse(saved) : defaultRecurringHistory;
+    } catch {
+      return defaultRecurringHistory;
+    }
+  });
+
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     try {
       const saved = localStorage.getItem(`${STORAGE_KEY}_notifications`);
@@ -844,6 +900,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [activePeriodModal, setActivePeriodModal] = useState<PeriodKey | null>(null);
   const [isRelatoriosModalOpen, setIsRelatoriosModalOpen] = useState(false);
+
+  // Preferences
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_notif_prefs`);
+      return saved ? JSON.parse(saved) : defaultNotificationPreferences;
+    } catch {
+      return defaultNotificationPreferences;
+    }
+  });
 
   // Auth State
   const [isLoggedIn, setIsLoggedIn] = useState(true);
@@ -869,7 +935,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(`${STORAGE_KEY}_health`, JSON.stringify(healthItems));
       localStorage.setItem(`${STORAGE_KEY}_goals`, JSON.stringify(goals));
       localStorage.setItem(`${STORAGE_KEY}_recurring`, JSON.stringify(recurringTasks));
+      localStorage.setItem(`${STORAGE_KEY}_recurring_history`, JSON.stringify(recurringHistory));
       localStorage.setItem(`${STORAGE_KEY}_notifications`, JSON.stringify(notifications));
+      localStorage.setItem(`${STORAGE_KEY}_notif_prefs`, JSON.stringify(notificationPreferences));
     } catch {
       // Ignore quota errors in restricted contexts
     }
@@ -902,6 +970,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateProfileName = (profileId: string, name: string) => {
     setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, name } : p)));
+  };
+
+  const addProfile = (profile: Omit<UserProfile, 'id'>) => {
+    const newP: UserProfile = {
+      ...profile,
+      id: `p-${Date.now()}`
+    };
+    setProfiles((prev) => [...prev, newP]);
+  };
+
+  const deleteProfile = (id: string) => {
+    if (profiles.length <= 1) return;
+    setProfiles((prev) => prev.filter((p) => p.id !== id));
+    if (currentProfileId === id) {
+      const remaining = profiles.filter((p) => p.id !== id);
+      if (remaining.length > 0) setCurrentProfileId(remaining[0].id);
+    }
   };
 
   const currentMood = moodEntries.find((m) => m.date === selectedDate) || moodEntries[0] || null;
@@ -1289,6 +1374,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setHealthItems((prev) => [...prev, newItem]);
   };
 
+  const deleteHealthItem = (id: string) => {
+    setHealthItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
   // Metas
   const toggleGoalStep = (goalId: string, stepId: string) => {
     setGoals((prev) =>
@@ -1323,10 +1412,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setGoals((prev) => [...prev, newGoal]);
   };
 
+  const deleteGoal = (id: string) => {
+    setGoals((prev) => prev.filter((g) => g.id !== id));
+  };
+
+  // Recurring Tasks
+  const addRecurringTask = (task: Omit<RecurringTaskItem, 'id' | 'status'>) => {
+    const newTask: RecurringTaskItem = {
+      ...task,
+      id: `rec-${Date.now()}`,
+      status: 'pendente'
+    };
+    setRecurringTasks((prev) => [...prev, newTask]);
+  };
+
+  const deleteRecurringTask = (id: string) => {
+    setRecurringTasks((prev) => prev.filter((t) => t.id !== id));
+  };
+
   const completeRecurringTask = (id: string) => {
+    const task = recurringTasks.find((t) => t.id === id);
+    if (!task) return;
     setRecurringTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, status: 'concluido' } : t))
     );
+    const now = new Date();
+    const dayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const newRecord: TaskExecutionRecord = {
+      id: `th-${Date.now()}`,
+      taskId: task.id,
+      taskTitle: task.title,
+      displayDate: dayStr,
+      completedAt: now.toISOString()
+    };
+    setRecurringHistory((prev) => [newRecord, ...prev]);
   };
 
   const markNotificationRead = (id: string) => {
@@ -1340,6 +1459,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsLoggedIn(true);
   };
 
+  const toggleNotificationPreference = (key: keyof NotificationPreferences) => {
+    setNotificationPreferences((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem(`${STORAGE_KEY}_notif_prefs`, JSON.stringify(updated));
+      } catch {
+        // Ignore quota error
+      }
+      return updated;
+    });
+  };
+
+  const exportAppData = () => {
+    const data = {
+      profiles,
+      currentProfileId,
+      moodEntries,
+      moodRecords,
+      availableFactors,
+      dayFactors,
+      dayNotes,
+      lifeAreas,
+      questionGroups,
+      questions,
+      questionResponses,
+      agendaItems,
+      routineTasks,
+      contextualReminders,
+      healthItems,
+      goals,
+      recurringTasks,
+      recurringHistory,
+      notificationPreferences,
+      exportedAt: new Date().toISOString()
+    };
+    return JSON.stringify(data, null, 2);
+  };
+
+  const importAppData = (jsonString: string): boolean => {
+    try {
+      const data = JSON.parse(jsonString);
+      if (Array.isArray(data.profiles)) setProfiles(data.profiles);
+      if (Array.isArray(data.moodRecords)) setMoodRecords(data.moodRecords);
+      if (Array.isArray(data.questions)) setQuestions(data.questions);
+      if (Array.isArray(data.questionResponses)) setQuestionResponses(data.questionResponses);
+      if (Array.isArray(data.agendaItems)) setAgendaItems(data.agendaItems);
+      if (Array.isArray(data.routineTasks)) setRoutineTasks(data.routineTasks);
+      if (Array.isArray(data.healthItems)) setHealthItems(data.healthItems);
+      if (Array.isArray(data.goals)) setGoals(data.goals);
+      if (Array.isArray(data.recurringTasks)) setRecurringTasks(data.recurringTasks);
+      if (Array.isArray(data.recurringHistory)) setRecurringHistory(data.recurringHistory);
+      if (data.notificationPreferences) setNotificationPreferences(data.notificationPreferences);
+      return true;
+    } catch (err) {
+      console.error('Falha ao restaurar dados', err);
+      return false;
+    }
+  };
+
+  const resetAppToDefaults = () => {
+    try {
+      localStorage.clear();
+    } catch {}
+    setProfiles(defaultProfiles);
+    setCurrentProfileId('p1');
+    setMoodEntries(defaultMoodEntries);
+    setMoodRecords(defaultMoodRecords);
+    setAvailableFactors(defaultAvailableFactors);
+    setDayFactors(defaultDayFactors);
+    setDayNotes({});
+    setLifeAreas(defaultLifeAreas);
+    setQuestionGroups(defaultQuestionGroups);
+    setQuestions(defaultQuestions);
+    setQuestionResponses(defaultQuestionResponses);
+    setAgendaItems(defaultAgendaItems);
+    setRoutineTasks(defaultRoutineTasks);
+    setContextualReminders(defaultContextualReminders);
+    setHealthItems(defaultHealthItems);
+    setGoals(defaultGoals);
+    setRecurringTasks(defaultRecurringTasks);
+    setRecurringHistory(defaultRecurringHistory);
+    setNotificationPreferences(defaultNotificationPreferences);
+  };
+
   const logout = () => {
     setIsLoggedIn(false);
   };
@@ -1351,6 +1554,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentProfile,
         switchProfile,
         updateProfileName,
+        addProfile,
+        deleteProfile,
+        notificationPreferences,
+        toggleNotificationPreference,
+        exportAppData,
+        importAppData,
+        resetAppToDefaults,
         selectedDate,
         setSelectedDate,
         moodEntries,
@@ -1405,11 +1615,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         healthItems,
         toggleHealthItem,
         addHealthItem,
+        deleteHealthItem,
         goals,
         toggleGoalStep,
         addGoal,
+        deleteGoal,
         recurringTasks,
+        recurringHistory,
         completeRecurringTask,
+        addRecurringTask,
+        deleteRecurringTask,
         notifications,
         markNotificationRead,
         isNotificationsOpen,

@@ -379,3 +379,20 @@ export function formatBrazilianDate(isoDateString: string): string {
   return 'Sábado, 16 de Novembro';
 }
 
+export function filterAgendaByDate(items: AgendaItem[], dateStr: string): AgendaItem[] {
+  if (!dateStr) return items;
+  return items.filter((item) => item.date === dateStr);
+}
+
+export function calculateDayRoutineProgress(
+  tasks: RoutineTask[],
+  dayIndex: number // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
+): { total: number; completed: number; percent: number } {
+  const dayTasks = tasks.filter((t) => {
+    if (!t.daysOfWeek || t.daysOfWeek.length === 0) return true; // applies to all days
+    return t.daysOfWeek.includes(dayIndex);
+  });
+  return calculateRoutineProgress(dayTasks);
+}
+
+

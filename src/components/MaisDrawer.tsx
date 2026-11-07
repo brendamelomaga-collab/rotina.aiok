@@ -42,6 +42,16 @@ export const MaisDrawer: React.FC = () => {
 
   const menuSections = [
     {
+      id: 'configuracoes',
+      label: 'Configurações & Perfil',
+      desc: 'Gestão familiar, lembretes, backup e limpeza de dados',
+      icon: <Settings className="w-5 h-5 text-[#8C7A6B]" />,
+      action: () => {
+        setIsMaisDrawerOpen(false);
+        setActiveTab('configuracoes');
+      }
+    },
+    {
       id: 'relatorios',
       label: 'Relatórios do Mapa',
       desc: 'Desempenho geral, gráfico de evolução e acompanhamento',
@@ -52,28 +62,51 @@ export const MaisDrawer: React.FC = () => {
       }
     },
     {
+      id: 'cuidados',
+      label: 'Cuidados e Saúde',
+      desc: 'Medicamentos, suplementos e cuidados diários',
+      icon: <Pill className="w-5 h-5 text-[#8C7A6B]" />,
+      action: () => {
+        setIsMaisDrawerOpen(false);
+        setActiveTab('cuidados');
+      }
+    },
+    {
+      id: 'metas',
+      label: 'Minhas Metas',
+      desc: 'Objetivos da casa e família divididos em passos',
+      icon: <Target className="w-5 h-5 text-[#8C7A6B]" />,
+      action: () => {
+        setIsMaisDrawerOpen(false);
+        setActiveTab('metas');
+      }
+    },
+    {
       id: 'recorrentes',
       label: 'Tarefas Recorrentes',
       desc: 'Calibrar pneu, lavar sapatos, troca de roupa de cama',
       icon: <Repeat className="w-5 h-5 text-[#8C7A6B]" />,
-      action: () => setActiveSubView('recorrentes')
-    },
-    {
-      id: 'familia',
-      label: 'Minha Família',
-      desc: 'Perfis de Brenda, Bryan, Benício e Lucas',
-      icon: <Users className="w-5 h-5 text-[#8C7A6B]" />,
-      action: () => setActiveSubView('familia')
+      action: () => {
+        setIsMaisDrawerOpen(false);
+        setActiveTab('recorrentes');
+      }
     },
     {
       id: 'ia',
       label: 'Assistente IA',
-      desc: 'Converse para tirar dúvidas e criar rotinas',
+      desc: 'Aba dedicada para conversar e criar rotinas',
       icon: <Bot className="w-5 h-5 text-[#8C7A6B]" />,
       action: () => {
         setIsMaisDrawerOpen(false);
-        setIsAiChatOpen(true);
+        setActiveTab('ia');
       }
+    },
+    {
+      id: 'familia',
+      label: 'Membros da Família',
+      desc: 'Alternar entre Brenda, Bryan, Benício e Lucas',
+      icon: <Users className="w-5 h-5 text-[#8C7A6B]" />,
+      action: () => setActiveSubView('familia')
     },
     {
       id: 'seguranca',

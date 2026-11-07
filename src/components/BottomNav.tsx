@@ -1,12 +1,13 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Home, BarChart2, Calendar, CheckSquare, TrendingUp, Bot, Sparkles } from 'lucide-react';
+import { Home, BarChart2, Calendar, CheckSquare, Menu, Bot, Sparkles } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
   const {
     activeTab,
     setActiveTab,
     setIsMaisDrawerOpen,
+    isMaisDrawerOpen,
     setIsAiChatOpen
   } = useApp();
 
@@ -36,10 +37,10 @@ export const BottomNav: React.FC = () => {
       onClick: () => setActiveTab('rotinas')
     },
     {
-      id: 'relatorios' as const,
-      label: 'Relatórios',
-      icon: <TrendingUp className="w-5 h-5" />,
-      onClick: () => setActiveTab('relatorios')
+      id: 'mais' as const,
+      label: 'Mais',
+      icon: <Menu className="w-5 h-5" />,
+      onClick: () => setIsMaisDrawerOpen(true)
     }
   ];
 
